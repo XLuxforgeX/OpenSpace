@@ -30,7 +30,7 @@ execute_task(task="Monitor Docker containers, find the highest memory one, resta
 | `search_scope` | no | `"all"` | Local + cloud; falls back to local-only if no API key |
 | `max_iterations` | no | `20` | Max agent iterations — increase for complex tasks, decrease for simple ones |
 
-Check response for `evolved_skills`. If present with `upload_ready: true`, decide whether to upload (see "When to upload" below).
+Check response for `evolved_skills`. If present with `upload_ready: true`, **do NOT upload automatically** — follow the upload safety protocol below.
 
 ```json
 {
@@ -115,17 +115,40 @@ upload_skill(
 | `created_by` | no | auto | Creator |
 | `change_summary` | no | auto | What changed |
 
-### When to upload
+### Upload Safety Protocol
 
-| Situation | Action |
-|-----------|--------|
-| Skill was originally from the cloud | Upload back as `"public"` — return the improvement to the community |
-| Fix/evolution is generally useful | Upload as `"public"` |
-| Fix/evolution is project-specific | Upload as `"private"`, or skip |
+**Default: Do NOT upload.** Evolved skills may contain project paths, API patterns, internal logic, or secrets. Only upload after completing ALL of these steps:
+
+#### Step 1 — Secret & Data Scan (mandatory)
+Before any upload, scan the evolved skill directory for:
+- API keys, tokens, secrets, passwords (literal or patterned: `sk-`, `re_`, `whsec_`, bearer tokens)
+- Hardcoded file paths containing usernames or project-specific directories
+- Internal hostnames, IPs, or port numbers
+- `.env` variable values (not names)
+- Any data that identifies the user, project, or infrastructure
+
+If ANY are found: **do not upload**. Tell the user what was found and let them decide.
+
+#### Step 2 — User Approval (mandatory)
+Tell the user:
+- The skill name and what it does
+- Whether it's public or private
+- Confirm: "Should I upload this skill to the cloud community?"
+
+**Only upload after explicit user approval.** Never auto-upload.
+
+#### Step 3 — Upload Decision Guide
+
+| Situation | Default Action |
+|-----------|---------------|
+| Skill was originally from the cloud | Ask user — don't assume they want to share back |
+| Fix/evolution is generally useful | Ask user — suggest `"public"` |
+| Fix/evolution is project-specific | Skip upload — suggest `"private"` only if user asks |
 | User says to share | Upload with the visibility the user wants |
 
 ## Notes
 
 - `execute_task` may take minutes — this is expected for multi-step tasks.
 - `upload_skill` requires a cloud API key; if it fails, the evolved skill is still saved locally.
-- After every OpenSpace call, **tell the user** what happened: task result, any evolved skills, and your upload decision.
+- After every OpenSpace call, **tell the user** what happened: task result, any evolved skills, and what you found in the secret scan.
+- **Never upload without explicit user approval.**
